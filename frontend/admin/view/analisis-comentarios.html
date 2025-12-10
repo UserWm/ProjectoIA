@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filtros de Comentarios de Clientes</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: Poppins, sans-serif;
+            background: #CAF0F8;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: #03045E;
+            color: white;
+            padding: 25px;
+        }
+
+        .sidebar-item {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background: #0077B6;
+        }
+
+        .content {
+            margin-left: 330px;
+            padding: 30px;
+        }
+
+        #resultado {
+            background: white;
+            border-radius: 14px;
+            min-height: 150px;
+            border: 1px solid #90E0EF;
+            padding: 20px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        #btn-descargar-pdf {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-item" onclick="window.location.href='../dashboard.html'">
+            Dashboard
+        </div>
+        <hr>
+        <!-- <h2 class="fw-bold mb-4">Historial</h2>
+        <div id="historial-list"></div> -->
+    </div>
+
+    <div class="content">
+        <h2 class="fw-bold mb-4" style="color:#03045E;">Filtros de Comentarios de Clientes</h2>
+
+        <div class="card p-4 shadow-sm" style="border-radius:18px">
+            <div class="row g-4">
+                <!-- Plataforma -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Plataforma</label>
+                    <select id="select-plataforma" class="form-select filtro">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+
+                <!-- Rango de fechas -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Rango de fecha</label>
+                    <input type="date" class="form-control filtro" id="fecha-inicio">
+                    <input type="date" class="form-control filtro mt-2" id="fecha-fin">
+                </div>
+
+                <!-- Palabras clave -->
+                <div class="col-12">
+                    <label class="fw-bold mb-1">Palabras clave</label>
+                    <input type="text" id="palabras-clave" class="form-control filtro"
+                        placeholder="Ej: excelente, retraso, bueno">
+                </div>
+            </div>
+
+            <hr>
+
+            <button id="btn-analizar" class="btn text-white" style="background:#0077B6">
+                Analizar comentarios
+            </button>
+
+            <button id="btn-descargar-pdf" class="btn mt-3" style="background:#90E0EF;color:#03045E;border:none">
+                Descargar PDF
+            </button>
+
+            <div id="resultado" class="mt-4" style="display:none;">
+                <canvas id="grafica-sentimiento" style="max-width:400px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librerías externas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script type="module">
+        // Cargar plataformas dinámicamente
+        document.addEventListener("DOMContentLoaded", async () => {
+            const select = document.getElementById("select-plataforma");
+            try {
+                const res = await fetch("http://localhost:4000/api/comentarios/plataformas");
+                const plataformas = await res.json();
+
+                select.innerHTML = '<option value="">Todos</option>';
+                plataformas.forEach(p => {
+                    select.innerHTML += `<option value="${p}">${p}</option>`;
+                });
+            } catch (error) {
+                console.error("Error cargando plataformas:", error);
+                select.innerHTML = '<option value="">Error al cargar</option>';
+            }
+        });
+
+        // Analizar comentarios
+        document.getElementById("btn-analizar").addEventListener("click", async () => {
+            const plataforma = document.getElementById("select-plataforma").value;
+            const fechaInicio = document.getElementById("fecha-inicio").value;
+            const fechaFin = document.getElementById("fecha-fin").value;
+            const palabrasClave = document.getElementById("palabras-clave").value;
+
+            const resultadoDiv = document.getElementById("resultado");
+            resultadoDiv.style.display = "block";
+
+            // Mensaje mientras se genera el contenido
+            resultadoDiv.innerHTML = `<em style="color:#0077B6">Generando contenido...</em>`;
+            document.getElementById("btn-descargar-pdf").style.display = "none";
+
+            try {
+                const res = await fetch("http://localhost:4000/api/comentarios/analizar", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ plataforma, fechaInicio, fechaFin, palabrasClave })
+                });
+
+                const data = await res.json();
+
+                if (!data.comentarios || data.comentarios.length === 0) {
+                    resultadoDiv.innerHTML = `<span style="color:#0077B6">No hay datos disponibles para el análisis</span>`;
+                    document.getElementById("btn-descargar-pdf").style.display = "none";
+                    return;
+                }
+
+                // Mostrar análisis y gráfico
+                resultadoDiv.innerHTML = `<pre>${data.analisis}</pre><canvas id="grafica-sentimiento" style="max-width:400px;"></canvas>`;
+
+                mostrarGrafica(data.comentarios);
+                document.getElementById("btn-descargar-pdf").style.display = "inline-block";
+
+            } catch (error) {
+                resultadoDiv.innerHTML = `<span style="color:red">Error al generar el análisis</span>`;
+                console.error(error);
+            }
+        });
+
+        // Función para generar gráfica de sentimientos
+        function mostrarGrafica(comentarios) {
+            const positivos = comentarios.filter(c => c.texto.toLowerCase().includes("excelente") || c.texto.toLowerCase().includes("bueno")).length;
+            const negativos = comentarios.filter(c => c.texto.toLowerCase().includes("malo") || c.texto.toLowerCase().includes("retraso") || c.texto.toLowerCase().includes("no")).length;
+            const neutrales = comentarios.length - positivos - negativos;
+
+            const ctx = document.getElementById("grafica-sentimiento").getContext("2d");
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Positivo', 'Neutral', 'Negativo'],
+                    datasets: [{
+                        label: 'Sentimiento',
+                        data: [positivos, neutrales, negativos],
+                        backgroundColor: ['#4CAF50', '#FFC107', '#F44336']
+                    }]
+                }
+            });
+        }
+
+        // Descargar PDF
+        document.getElementById("btn-descargar-pdf").addEventListener("click", () => {
+            const doc = new jspdf.jsPDF();
+            const contenido = document.getElementById("resultado").innerText;
+            doc.text(contenido, 10, 10);
+            doc.save("analisis_comentarios.pdf");
+        });
+    </script>
+
+</body>
+
+</html>

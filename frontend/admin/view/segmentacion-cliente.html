@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Segmentación de Clientes</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: Poppins, sans-serif;
+            background: #CAF0F8;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: #03045E;
+            color: white;
+            padding: 25px;
+        }
+
+        .sidebar-item {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background: #0077B6;
+        }
+
+        .content {
+            margin-left: 330px;
+            padding: 30px;
+        }
+
+        #analisis-texto {
+            background: white;
+            border-radius: 14px;
+            min-height: 150px;
+            border: 1px solid #90E0EF;
+            padding: 20px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        #btn-descargar-pdf {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-item" onclick="window.location.href='../dashboard.html'">
+            Dashboard
+        </div>
+        <hr>
+        <!-- <h2 class="fw-bold mb-4">Historial</h2>
+        <div id="historial-list"></div> -->
+    </div>
+
+    <div class="content">
+        <h2 class="fw-bold mb-4" style="color:#03045E;">Segmentación de Clientes</h2>
+
+        <div class="card p-4 shadow-sm" style="border-radius:18px">
+            <div class="row g-4">
+                <!-- Rango de edad -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Edad mínima</label>
+                    <input type="number" class="form-control filtro" id="edad-min" placeholder="Ej: 18">
+                </div>
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Edad máxima</label>
+                    <input type="number" class="form-control filtro" id="edad-max" placeholder="Ej: 60">
+                </div>
+
+                <!-- Sexo -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Sexo</label>
+                    <select id="sexo" class="form-select filtro">
+                        <option value="">Todos</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
+                </div>
+
+                <!-- Ciudad -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Ciudad</label>
+                    <select id="ciudad" class="form-select filtro">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+
+                <!-- Fuente de adquisición -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Fuente de adquisición</label>
+                    <select id="fuente" class="form-select filtro">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr>
+
+            <button id="btn-analizar" class="btn text-white" style="background:#0077B6">
+                Analizar segmento
+            </button>
+
+            <button id="btn-descargar-pdf" class="btn mt-3" style="background:#90E0EF;color:#03045E;border:none">
+                Descargar PDF
+            </button>
+
+            <div id="analisis-texto" class="mt-4" style="display:none;">
+                <canvas id="graf-edad" style="max-width:400px;margin-bottom:20px;"></canvas>
+                <canvas id="graf-sexo" style="max-width:400px;margin-bottom:20px;"></canvas>
+                <canvas id="graf-ciudad" style="max-width:400px;margin-bottom:20px;"></canvas>
+                <canvas id="graf-fuente" style="max-width:400px;margin-bottom:20px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script type="module">
+        // Cargar ciudades y fuentes
+        document.addEventListener("DOMContentLoaded", async () => {
+            const selectCiudad = document.getElementById("ciudad");
+            const selectFuente = document.getElementById("fuente");
+            try {
+                const resCiudades = await fetch("http://localhost:4000/api/clientes/ciudades");
+                const ciudades = await resCiudades.json();
+                selectCiudad.innerHTML = "<option value=''>Todos</option>";
+                ciudades.forEach(c => selectCiudad.innerHTML += `<option value="${c}">${c}</option>`);
+
+                const resFuentes = await fetch("http://localhost:4000/api/clientes/fuentes");
+                const fuentes = await resFuentes.json();
+                selectFuente.innerHTML = "<option value=''>Todos</option>";
+                fuentes.forEach(f => selectFuente.innerHTML += `<option value="${f}">${f}</option>`);
+            } catch (error) {
+                console.error("Error cargando datos:", error);
+            }
+        });
+
+        // Analizar segmento
+        document.getElementById("btn-analizar").addEventListener("click", async () => {
+            const edadMin = document.getElementById("edad-min").value;
+            const edadMax = document.getElementById("edad-max").value;
+            const sexo = document.getElementById("sexo").value;
+            const ciudad = document.getElementById("ciudad").value;
+            const fuente = document.getElementById("fuente").value;
+
+            const analisisDiv = document.getElementById("analisis-texto");
+            analisisDiv.style.display = "block";
+            analisisDiv.innerHTML = "<em style='color:#0077B6'>Generando contenido...</em>";
+
+            const res = await fetch("http://localhost:4000/api/clientes/analizar-segmento", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ edadMin, edadMax, sexo, ciudad, fuente })
+            });
+
+            const data = await res.json();
+
+            if (!data.clientes || data.clientes.length === 0) {
+                analisisDiv.innerHTML = "<em style='color:red'>No hay datos disponibles para el análisis.</em>";
+                document.getElementById("btn-descargar-pdf").style.display = "none";
+                return;
+            }
+
+            // Mostrar análisis textual
+            analisisDiv.innerHTML = `<pre>${data.analisis}</pre>
+            <canvas id="graf-edad" style="max-width:400px;margin-bottom:20px;"></canvas>
+            <canvas id="graf-sexo" style="max-width:400px;margin-bottom:20px;"></canvas>
+            <canvas id="graf-ciudad" style="max-width:400px;margin-bottom:20px;"></canvas>
+            <canvas id="graf-fuente" style="max-width:400px;margin-bottom:20px;"></canvas>`;
+
+            mostrarGraficas(data.clientes);
+            document.getElementById("btn-descargar-pdf").style.display = "inline-block";
+        });
+
+        // Función para graficar
+        function mostrarGraficas(clientes) {
+            // Edad
+            const edades = clientes.map(c => c.edad);
+            const edadesUnicas = [...new Set(edades)].sort((a,b)=>a-b);
+            const ctxEdad = document.getElementById("graf-edad").getContext("2d");
+            new Chart(ctxEdad, {
+                type: 'bar',
+                data: { labels: edadesUnicas, datasets: [{ label: 'Cantidad', data: edadesUnicas.map(e => edades.filter(x => x===e).length), backgroundColor:'#0077B6' }] }
+            });
+
+            // Sexo
+            const sexos = clientes.map(c => c.sexo);
+            const ctxSexo = document.getElementById("graf-sexo").getContext("2d");
+            new Chart(ctxSexo, {
+                type: 'pie',
+                data: { labels: ['Masculino','Femenino'], datasets: [{ data: [sexos.filter(s=>'M'===s).length, sexos.filter(s=>'F'===s).length], backgroundColor:['#2196F3','#E91E63'] }] }
+            });
+
+            // Ciudad
+            const ciudades = clientes.map(c => c.ciudad);
+            const ciudadesUnicas = [...new Set(ciudades)];
+            const ctxCiudad = document.getElementById("graf-ciudad").getContext("2d");
+            new Chart(ctxCiudad, {
+                type: 'bar',
+                data: { labels: ciudadesUnicas, datasets: [{ label:'Cantidad', data: ciudadesUnicas.map(cu => ciudades.filter(x=>x===cu).length), backgroundColor:'#4CAF50' }] }
+            });
+
+            // Fuente
+            const fuentes = clientes.map(c => c.fuente_adquisicion);
+            const fuentesUnicas = [...new Set(fuentes)];
+            const ctxFuente = document.getElementById("graf-fuente").getContext("2d");
+            new Chart(ctxFuente, {
+                type: 'pie',
+                data: { labels: fuentesUnicas, datasets: [{ data: fuentesUnicas.map(fu => fuentes.filter(x=>x===fu).length), backgroundColor:['#FF9800','#FFC107','#FF5722','#9C27B0','#00BCD4'] }] }
+            });
+        }
+
+        // Descargar PDF con gráficas
+        document.getElementById("btn-descargar-pdf").addEventListener("click", () => {
+            const doc = new jspdf.jsPDF();
+            let y = 10;
+
+            doc.setFontSize(16);
+            doc.text("Segmentación de Clientes", 10, y);
+            y += 10;
+
+            const analisisTexto = document.querySelector("#analisis-texto pre");
+            if (analisisTexto) {
+                doc.setFontSize(12);
+                const lineHeight = 6;
+                analisisTexto.innerText.split('\n').forEach(line => {
+                    doc.text(line, 10, y);
+                    y += lineHeight;
+                    if (y > 270) { doc.addPage(); y = 10; }
+                });
+            }
+
+            const agregarGrafico = (id) => {
+                const canvas = document.getElementById(id);
+                if (canvas) {
+                    const imgData = canvas.toDataURL("image/png");
+                    if (y + 100 > 290) { doc.addPage(); y = 10; }
+                    doc.addImage(imgData, 'PNG', 10, y, 180, 100);
+                    y += 110;
+                }
+            };
+
+            agregarGrafico("graf-edad");
+            agregarGrafico("graf-sexo");
+            agregarGrafico("graf-ciudad");
+            agregarGrafico("graf-fuente");
+
+            doc.save("segmentacion_clientes.pdf");
+        });
+
+    </script>
+</body>
+
+</html>

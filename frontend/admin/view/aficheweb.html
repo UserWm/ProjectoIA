@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Afiche Web</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: Poppins, sans-serif;
+            background: #CAF0F8;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: #03045E;
+            color: white;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .sidebar-item {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .sidebar-item:hover {
+            background: #0077B6;
+        }
+
+        .content {
+            margin-left: 330px;
+            padding: 30px;
+        }
+
+        #resultado {
+            background: white;
+            border-radius: 14px;
+            min-height: 120px;
+            border: 1px solid #90E0EF;
+            padding: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-item" onclick="window.location.href='../dashboard.html'">Dashboard</div>
+        <hr>
+        <h2 class="fw-bold mb-4">Historial Web</h2>
+        <div id="historial-list"></div>
+    </div>
+
+    <div class="content">
+
+        <h2 class="fw-bold mb-4" style="color:#03045E;">Afiche para Sitio Web</h2>
+
+        <div class="card p-4 shadow-sm" style="border-radius:18px">
+
+            <div class="row g-4">
+
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Producto</label>
+                    <select id="select-productos" class="form-select">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="fw-bold mb-1">Edad objetivo</label>
+                    <select class="form-select filtro">
+                        <option>18–25</option>
+                        <option>25–35</option>
+                        <option>35–50</option>
+                        <option>50+</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="fw-bold mb-1">Género</label>
+                    <select class="form-select filtro">
+                        <option>Mixto</option>
+                        <option>Masculino</option>
+                        <option>Femenino</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="fw-bold mb-1">Intereses</label>
+                    <select class="form-select filtro">
+                        <option>Fitness</option>
+                        <option>Salud</option>
+                        <option>Tecnología</option>
+                        <option>Bienestar</option>
+                        <option>Ahorro</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Objetivo del anuncio</label>
+                    <select class="form-select filtro">
+                        <option>Aumentar ventas</option>
+                        <option>Posicionamiento</option>
+                        <option>Tráfico</option>
+                        <option>Promoción</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Estilo web</label>
+                    <select class="form-select filtro">
+                        <option>Moderno</option>
+                        <option>Minimalista</option>
+                        <option>Elegante</option>
+                        <option>Colorido</option>
+                        <option>Fotográfico</option>
+                    </select>
+                </div>
+
+                <div class="col-md-12">
+                    <label class="fw-bold mb-1">Tono del mensaje</label>
+                    <select class="form-select filtro">
+                        <option>Impactante</option>
+                        <option>Emocional</option>
+                        <option>Informativo</option>
+                        <option>Persuasivo</option>
+                        <option>Premium</option>
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="fw-bold mb-1">Requerimientos adicionales</label>
+                    <textarea id="descripcion" rows="4" class="form-control"></textarea>
+                </div>
+
+            </div>
+
+            <hr>
+
+            <button id="btn-generar" class="btn text-white" style="background:#0077B6">
+                Generar texto afiche web
+            </button>
+
+            <button id="btn-generar-imagen" class="btn mt-3 text-white" style="background:#00B4D8">
+                Generar afiche web visual 🎨
+            </button>
+            <div id="mensaje-afiche-web-visual" class="mt-2" style="color:#0077B6; display:none;">
+                Generando afiche web visual...
+            </div>
+            <div id="imagen-afiche" class="mt-4" style="display:none;">
+                <img id="img-resultado" src="" class="img-fluid rounded shadow">
+                <a id="btn-descargar" class="btn btn-success mt-3" download>Descargar</a>
+            </div>
+
+            <div id="resultado" class="mt-4" style="display:none;"></div>
+
+            <button id="btn-copiar" class="btn mt-3" style="background:#90E0EF;display:none;color:#03045E;border:none">
+                Copiar texto
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =======================================
+     CARGAR PRODUCTOS
+======================================= -->
+    <script type="module">
+        document.addEventListener("DOMContentLoaded", async () => {
+            const select = document.getElementById("select-productos");
+
+            const res = await fetch("http://localhost:4000/api/productos");
+            const productos = await res.json();
+
+            select.innerHTML = "<option value=''>Seleccione...</option>";
+            productos.forEach(p => {
+                select.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`;
+            });
+        });
+    </script>
+
+
+    <!-- =======================================
+     GENERAR TEXTO
+======================================= -->
+    <script type="module">
+        document.getElementById("btn-generar").addEventListener("click", async () => {
+
+            const filtros = {
+                producto: document.getElementById("select-productos").value,
+                edad: document.querySelectorAll(".filtro")[0].value,
+                genero: document.querySelectorAll(".filtro")[1].value,
+                intereses: document.querySelectorAll(".filtro")[2].value,
+                objetivo: document.querySelectorAll(".filtro")[3].value,
+                estilo: document.querySelectorAll(".filtro")[4].value,
+                tono: document.querySelectorAll(".filtro")[5].value,
+                descripcion: document.getElementById("descripcion").value
+            };
+
+            const cont = document.getElementById("resultado");
+            cont.style.display = "block";
+            cont.innerHTML = "Generando...";
+
+            const res = await fetch("http://localhost:4000/api/afiches-web", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(filtros)
+            });
+
+            const data = await res.json();
+            let i = 0;
+            const texto = data.resultado;
+
+            cont.innerHTML = "";
+            (function escribir() {
+                if (i < texto.length) {
+                    cont.innerHTML += texto.charAt(i);
+                    i++;
+                    setTimeout(escribir, 15);
+                }
+            })();
+
+            document.getElementById("btn-copiar").style.display = "inline-block";
+        });
+    </script>
+
+
+    <!-- =======================================
+     COPIAR TEXTO
+======================================= -->
+    <script type="module">
+        document.getElementById("btn-copiar").addEventListener("click", async () => {
+            const texto = document.getElementById("resultado").innerText;
+            await navigator.clipboard.writeText(texto);
+            const btn = document.getElementById("btn-copiar");
+            btn.innerHTML = "Copiado ✔";
+            setTimeout(() => btn.innerHTML = "Copiar texto", 2000);
+        });
+    </script>
+
+
+    <!-- =======================================
+     HISTORIAL
+======================================= -->
+    <script type="module">
+        document.addEventListener("DOMContentLoaded", async () => {
+
+            const cont = document.getElementById("historial-list");
+            const resultado = document.getElementById("resultado");
+
+            const res = await fetch("http://localhost:4000/api/afiches-web");
+            const historial = await res.json();
+
+            if (!historial.length) {
+                cont.innerHTML = "<p class='text-white-50'>Sin historial</p>";
+                return;
+            }
+
+            historial.forEach(item => {
+                const resumen = JSON.stringify(item.busqueda).slice(0, 40) + "...";
+
+                const div = document.createElement("div");
+                div.className = "sidebar-item";
+                div.innerHTML = `<strong>Afiche Web</strong><br><small>${resumen}</small>`;
+
+                div.addEventListener("click", () => {
+                    resultado.style.display = "block";
+                    resultado.innerText = item.resultado;
+                });
+
+                cont.appendChild(div);
+            });
+        });
+    </script>
+
+
+    <!-- =======================================
+     GENERAR IMAGEN PARA AFICHE WEB
+======================================= -->
+    <script type="module">
+       document.getElementById("btn-generar-imagen")
+.addEventListener("click", async () => {
+
+    const mensaje = document.getElementById("mensaje-afiche-web-visual");
+    mensaje.style.display = "block"; // mostrar mensaje
+
+    const resultado = document.getElementById("resultado").innerText;
+
+    if (!resultado) {
+        alert("Primero genera el texto del afiche web.");
+        mensaje.style.display = "none"; // ocultar mensaje si no hay texto
+        return;
+    }
+
+    const lineas = resultado.split("\n").map(x => x.trim()).filter(x => x);
+    const headline = lineas[0] || "Título Web";
+    const texto = lineas[1] || "Texto descriptivo web";
+    const cta = lineas[lineas.length - 1] || "Ver más";
+    const estilo = "banner web profesional, moderno, elegante";
+
+    const res = await fetch("http://localhost:4000/api/afiches-web/imagen", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ headline, texto, cta, estilo })
+    });
+
+    const data = await res.json();
+    mensaje.style.display = "none"; // ocultar mensaje cuando llegue la respuesta
+    console.log("Backend:", data);
+
+    if (data.ok) {
+        const imgBox = document.getElementById("imagen-afiche");
+        const img = document.getElementById("img-resultado");
+        const btnDescargar = document.getElementById("btn-descargar");
+
+        img.src = data.image;
+        btnDescargar.href = data.image;
+
+        imgBox.style.display = "block";
+    }
+});
+
+    </script>
+
+</body>
+
+</html>

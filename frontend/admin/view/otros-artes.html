@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Otros Artes</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: Poppins, sans-serif;
+            background: #CAF0F8;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: #03045E;
+            color: white;
+            padding: 25px;
+            overflow-y: auto;
+        }
+
+        .sidebar-item {
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background: #0077B6;
+        }
+
+        .content {
+            margin-left: 330px;
+            padding: 30px;
+        }
+
+        #resultado {
+            background: white;
+            border-radius: 14px;
+            min-height: 120px;
+            border: 1px solid #90E0EF;
+            padding: 20px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =======================================
+     SIDEBAR
+======================================= -->
+    <div class="sidebar">
+        <div class="sidebar-item" onclick="window.location.href='../dashboard.html'">
+            Dashboard
+        </div>
+        <hr>
+        <h2 class="fw-bold mb-4">Historial - Otros Artes</h2>
+        <div id="historial-list"></div>
+    </div>
+
+    <!-- =======================================
+     CONTENIDO PRINCIPAL
+======================================= -->
+    <div class="content">
+
+        <h2 class="fw-bold mb-4" style="color:#03045E;">Otros Artes</h2>
+
+        <div class="card p-4 shadow-sm" style="border-radius:18px">
+
+            <div class="row g-4">
+
+                <!-- PRODUCTOS DESDE LA BD -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Producto</label>
+                    <select id="select-productos" class="form-select">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+
+                <!-- TIPO DE ARTE -->
+                <div class="col-md-6">
+                    <label class="fw-bold mb-1">Tipo de arte</label>
+                    <select id="tipo_arte" class="form-select filtro">
+                        <option>Banners Web</option>
+                        <option>Portadas</option>
+                        <option>Flyers</option>
+                        <option>Tarjetas Digitales</option>
+                        <option>Infografías</option>
+                        <option>Montajes</option>
+                        <option>Diseños Mixtos</option>
+                    </select>
+                </div>
+
+                <!-- TRANSACCIONES -->
+                <div class="col-md-12">
+                    <label class="fw-bold mb-1">¿Deseas usar transacciones del cliente como referencia?</label>
+                    <select id="transacciones" class="form-select">
+                        <option>No aplicar</option>
+                        <option>Cliente compra frecuentemente</option>
+                        <option>Cliente dejó de comprar</option>
+                        <option>Aumento de compras recientes</option>
+                        <option>Compras relacionadas al producto</option>
+                    </select>
+                </div>
+
+                <!-- INTERACCIONES -->
+                <div class="col-md-12">
+                    <label class="fw-bold mb-1">Interacciones del cliente</label>
+                    <select id="interacciones" class="form-select">
+                        <option>No aplicar</option>
+                        <option>Interactúa mucho con la marca</option>
+                        <option>No interactúa casi nada</option>
+                        <option>Reacciona mucho a publicaciones</option>
+                        <option>Envía mensajes frecuentes</option>
+                    </select>
+                </div>
+
+                <!-- DESCRIPCIÓN -->
+                <div class="col-12">
+                    <label class="fw-bold mb-1">Descripción y requerimientos adicionales</label>
+                    <textarea id="descripcion" rows="4" class="form-control"></textarea>
+                </div>
+
+            </div>
+
+            <hr>
+
+            <!-- BOTÓN GENERAR TEXTO -->
+            <button id="btn-generar" class="btn text-white" style="background:#0077B6">
+                Generar arte textual
+            </button>
+
+            <!-- BOTÓN GENERAR IMAGEN -->
+            <button id="btn-generar-imagen" class="btn mt-3 text-white" style="background:#00B4D8;border:none;">
+                Generar arte visual 🎨
+            </button>
+            <!-- LOADING IMAGEN -->
+            <div id="loading-img" class="text-center mt-4" style="display:none;">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                <p class="mt-2 fw-bold" style="color:#03045E;">Generando imagen...</p>
+            </div>
+
+
+            <!-- IMAGEN -->
+            <div id="imagen-afiche" class="mt-4" style="display:none;">
+                <img id="img-resultado" src="" class="img-fluid rounded shadow">
+                <a id="btn-descargar" class="btn btn-success mt-3" download>Descargar imagen</a>
+            </div>
+
+            <!-- RESULTADO TEXTO -->
+            <div id="resultado" class="mt-4"></div>
+
+            <!-- COPIAR -->
+            <button id="btn-copiar" class="btn mt-3" style="background:#90E0EF;display:none;color:#03045E;border:none">
+                Copiar texto
+            </button>
+
+
+
+        </div>
+
+    </div>
+
+    <!-- =======================================
+     JS CARGAR PRODUCTOS
+======================================= -->
+    <script type="module">
+        document.addEventListener("DOMContentLoaded", async () => {
+            const select = document.getElementById("select-productos");
+
+            const res = await fetch("http://localhost:4000/api/productos");
+            const productos = await res.json();
+
+            select.innerHTML = "<option value=''>Seleccione...</option>";
+
+            productos.forEach(p => {
+                select.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`;
+            });
+        });
+    </script>
+
+    <!-- =======================================
+     GENERAR TEXTO
+======================================= -->
+    <script type="module">
+        document.getElementById("btn-generar")
+            .addEventListener("click", async () => {
+
+                const data = {
+                    producto: document.getElementById("select-productos").value,
+                    tipo_arte: document.getElementById("tipo_arte").value,
+                    transacciones: document.getElementById("transacciones").value,
+                    interacciones: document.getElementById("interacciones").value,
+                    descripcion: document.getElementById("descripcion").value
+                };
+
+                const resultado = document.getElementById("resultado");
+                resultado.style.display = "block";
+                resultado.innerHTML = "Generando contenido...";
+
+                const res = await fetch("http://localhost:4000/api/otros-artes", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+
+                const out = await res.json();
+                const texto = out.resultado;
+
+                resultado.innerHTML = "";
+                let i = 0;
+
+                (function escribir() {
+                    if (i < texto.length) {
+                        resultado.innerHTML += texto.charAt(i);
+                        i++;
+                        setTimeout(escribir, 12);
+                    }
+                })();
+
+                document.getElementById("btn-copiar").style.display = "inline-block";
+            });
+    </script>
+
+    <!-- =======================================
+     COPIAR TEXTO
+======================================= -->
+    <script type="module">
+        document.getElementById("btn-copiar").addEventListener("click", async () => {
+            const txt = document.getElementById("resultado").innerText;
+            await navigator.clipboard.writeText(txt);
+            const btn = document.getElementById("btn-copiar");
+            btn.innerHTML = "Copiado ✔";
+            setTimeout(() => btn.innerHTML = "Copiar texto", 2000);
+        });
+    </script>
+
+    <!-- =======================================
+     GENERAR IMAGEN
+======================================= -->
+    <script type="module">
+       document.getElementById("btn-generar-imagen")
+.addEventListener("click", async () => {
+
+    const resultado = document.getElementById("resultado").innerText;
+
+    if (!resultado) {
+        alert("Primero debes generar el contenido textual.");
+        return;
+    }
+
+    // EXTRAER DATOS
+    const lineas = resultado.split("\n").map(x => x.trim()).filter(x => x);
+    const headline = lineas[0] || "Título";
+    const texto = lineas[1] || "Descripción";
+    const cta = lineas[lineas.length - 1] || "¡Compra ahora!";
+    const estilo = "moderno, profesional, colores llamativos";
+
+    // MOSTRAR LOADING
+    document.getElementById("loading-img").style.display = "block";
+    document.getElementById("imagen-afiche").style.display = "none";
+
+    const res = await fetch("http://localhost:4000/api/otros-artes-imagen", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ headline, texto, cta, estilo })
+    });
+
+    const data = await res.json();
+
+    // QUITAR LOADING
+    document.getElementById("loading-img").style.display = "none";
+
+    // SI HAY IMAGEN
+    if (data.ok) {
+        const imgBox = document.getElementById("imagen-afiche");
+        const img = document.getElementById("img-resultado");
+        const btnDescargar = document.getElementById("btn-descargar");
+
+        img.src = data.image;
+        btnDescargar.href = data.image;
+
+        imgBox.style.display = "block";
+    } else {
+        alert("Hubo un error generando la imagen.");
+    }
+});
+
+    </script>
+
+    <!-- =======================================
+     HISTORIAL
+======================================= -->
+    <script type="module">
+        document.addEventListener("DOMContentLoaded", async () => {
+
+            const cont = document.getElementById("historial-list");
+            const resultado = document.getElementById("resultado");
+
+            const res = await fetch("http://localhost:4000/api/otros-artes");
+            const historial = await res.json();
+
+            if (!historial.length) {
+                cont.innerHTML = "<p class='text-white-50'>Sin historial</p>";
+                return;
+            }
+
+            historial.forEach(item => {
+                const resumen = JSON.stringify(item.busqueda).slice(0, 40) + "...";
+
+                const div = document.createElement("div");
+                div.className = "sidebar-item";
+                div.innerHTML = `<strong>Arte</strong><br><small>${resumen}</small>`;
+
+                div.addEventListener("click", () => {
+                    resultado.style.display = "block";
+                    resultado.innerText = item.resultado;
+                });
+
+                cont.appendChild(div);
+            });
+        });
+    </script>
+
+</body>
+
+</html>
